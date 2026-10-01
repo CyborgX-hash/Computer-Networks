@@ -1,4 +1,12 @@
 {
   "name": "backend-a",
-  "version": "1.0.0"
+  "version": "1.0.0",
+  "description": "Backend A service for Private Network Service Platform",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2"
+  }
 }
