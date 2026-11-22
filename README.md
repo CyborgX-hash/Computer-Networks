@@ -291,19 +291,55 @@ Client (Mac 1)            DNS (Mac 1:53)          Edge / Nginx (Mac 2)     Backe
 
 ### Mac 3: Dual Backend Microservices
 
-1. **Start Backend Server A** (Port `3001`):
+#### Phase 2 Service Management & Automation Scripts
+
+Mac 3 hosts **Backend A** (`:3001`) and **Backend B** (`:3002`), featuring independent process controls, health endpoints, IP whitelisting, and automated failover testing:
+
+1. **Start Both Backend Services**:
    ```bash
-   cd backend/backend-a
-   npm install
-   npm start
+   ./backend/start-all.sh
    ```
 
-2. **Start Backend Server B** (Port `3002`):
+2. **Check Backend Health**:
    ```bash
-   cd backend/backend-b
-   npm install
-   npm start
+   ./backend/health-check.sh
    ```
+
+3. **Independent Control (for Failover Demos)**:
+   ```bash
+   # Backend A (Port 3001)
+   ./backend/start-a.sh
+   ./backend/stop-a.sh
+
+   # Backend B (Port 3002)
+   ./backend/start-b.sh
+   ./backend/stop-b.sh
+   ```
+
+4. **Stop All Backend Services**:
+   ```bash
+   ./backend/stop-all.sh
+   ```
+
+5. **Automated Failover & Recovery Verification**:
+   ```bash
+   ./backend/test-backend-failover.sh
+   ```
+
+6. **Backend Access Security (Requirement C)**:
+   - **Application-Layer**: Inbound requests to ports `3001` and `3002` are strictly restricted by Express IP middleware to authorized nodes:
+     - Mac 1 (Standby Edge): `10.200.251.106`
+     - Mac 2 (Primary Edge): `10.200.251.227`
+     - Local Loopback: `127.0.0.1`
+     - Unauthorized clients receive `HTTP 403 Forbidden`.
+   - **Network-Layer (Packet Filter `pfctl`)**: Scoped rules are available in `config/pf_backend.rules` and backup in `config/pf.conf.backup`.
+     ```bash
+     # Load scoped backend anchor without flushing main system rules
+     sudo pfctl -a backend -f config/pf_backend.rules
+
+     # Rollback / remove backend anchor
+     sudo pfctl -a backend -F all
+     ```
 
 ---
 

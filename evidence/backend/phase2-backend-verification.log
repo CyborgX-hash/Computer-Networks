@@ -1,0 +1,227 @@
+=================================================================
+PHASE 2: BACKEND FAILOVER AND RECOVERY VERIFICATION TEST
+Date: Mon Nov 23 01:09:36 IST 2026
+=================================================================
+
+>>> STEP 1: Ensuring both backends are running...
+=== Starting Private Network Backend Services ===
+Starting Backend A on port 3001...
+Backend A successfully started (PID: 36690) on http://0.0.0.0:3001
+Starting Backend B on port 3002...
+Backend B successfully started (PID: 36701) on http://0.0.0.0:3002
+=== All backend services successfully initiated ===
+==================================================
+Backend Health Check Report
+Date: Mon Nov 23 01:09:38 IST 2026
+==================================================
+[Backend A :3001] ... HEALTHY (HTTP 200)
+  Response: {"status":"UP","backend":"A","port":3001,"timestamp":"2026-11-22T19:39:38.901Z"}
+[Backend B :3002] ... HEALTHY (HTTP 200)
+  Response: {"status":"UP","backend":"B","port":3002,"timestamp":"2026-11-22T19:39:38.914Z"}
+==================================================
+
+>>> STEP 2: Verifying baseline endpoints and response headers...
+--- Testing Backend A (Port 3001) ---
+HTTP/1.1 200 OK
+X-Powered-By: Express
+X-Backend: A
+Content-Type: application/json; charset=utf-8
+Content-Length: 62
+ETag: W/"3e-QF9vFacPifwgRXeqh9wcQA56VjA"
+Date: Sun, 22 Nov 2026 19:39:38 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+{"backend":"A","status":"ok","message":"Backend A is running"}HTTP/1.1 200 OK
+X-Powered-By: Express
+X-Backend: A
+Cache-Control: public, max-age=60
+Content-Type: application/json; charset=utf-8
+Content-Length: 29
+ETag: W/"1d-/mMMZex8nvIDi44lSUobi0vFg/M"
+Date: Sun, 22 Nov 2026 19:39:38 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+{"backend":"A","status":"ok"}HTTP/1.1 200 OK
+X-Powered-By: Express
+X-Backend: A
+Content-Type: application/json; charset=utf-8
+Content-Length: 80
+ETag: W/"50-WxQmODAD9zvCf/f326YUEfabxwU"
+Date: Sun, 22 Nov 2026 19:39:38 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+{"status":"UP","backend":"A","port":3001,"timestamp":"2026-11-22T19:39:38.937Z"}
+--- Testing Backend B (Port 3002) ---
+HTTP/1.1 200 OK
+X-Powered-By: Express
+X-Backend: B
+Content-Type: application/json; charset=utf-8
+Content-Length: 62
+ETag: W/"3e-L7e+fLmzUIpnHbkY2t3E2GNlFR0"
+Date: Sun, 22 Nov 2026 19:39:38 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+{"backend":"B","status":"ok","message":"Backend B is running"}HTTP/1.1 200 OK
+X-Powered-By: Express
+X-Backend: B
+Cache-Control: public, max-age=60
+Content-Type: application/json; charset=utf-8
+Content-Length: 29
+ETag: W/"1d-eqo46f6cZTMyh8pAIw5ntQG78PA"
+Date: Sun, 22 Nov 2026 19:39:38 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+{"backend":"B","status":"ok"}HTTP/1.1 200 OK
+X-Powered-By: Express
+X-Backend: B
+Content-Type: application/json; charset=utf-8
+Content-Length: 80
+ETag: W/"50-x1X9m/bGcuiBG9bhx9FHCgteDv0"
+Date: Sun, 22 Nov 2026 19:39:38 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+{"status":"UP","backend":"B","port":3002,"timestamp":"2026-11-22T19:39:38.957Z"}
+>>> STEP 3: Simulating Backend A Failure (Stopping Backend A)...
+Stopping Backend A (PID: 36690)...
+Backend A stopped successfully.
+Checking health of both instances during Backend A outage:
+==================================================
+Backend Health Check Report
+Date: Mon Nov 23 01:09:40 IST 2026
+==================================================
+[Backend A :3001] ... UNAVAILABLE (Port 3001 not responding)
+[Backend B :3002] ... HEALTHY (HTTP 200)
+  Response: {"status":"UP","backend":"B","port":3002,"timestamp":"2026-11-22T19:39:40.024Z"}
+==================================================
+Verifying Backend B continues to handle traffic:
+CONFIRMED: Backend B is operational (HTTP 200) while Backend A is down.
+
+>>> STEP 4: Restoring Backend A...
+Starting Backend A on port 3001...
+Backend A successfully started (PID: 37161) on http://0.0.0.0:3001
+Checking health after Backend A recovery:
+==================================================
+Backend Health Check Report
+Date: Mon Nov 23 01:09:41 IST 2026
+==================================================
+[Backend A :3001] ... HEALTHY (HTTP 200)
+  Response: {"status":"UP","backend":"A","port":3001,"timestamp":"2026-11-22T19:39:41.113Z"}
+[Backend B :3002] ... HEALTHY (HTTP 200)
+  Response: {"status":"UP","backend":"B","port":3002,"timestamp":"2026-11-22T19:39:41.156Z"}
+==================================================
+
+>>> STEP 5: Simulating Backend B Failure (Stopping Backend B)...
+Stopping Backend B (PID: 36701)...
+Backend B stopped successfully.
+Checking health of both instances during Backend B outage:
+==================================================
+Backend Health Check Report
+Date: Mon Nov 23 01:09:42 IST 2026
+==================================================
+[Backend A :3001] ... HEALTHY (HTTP 200)
+  Response: {"status":"UP","backend":"A","port":3001,"timestamp":"2026-11-22T19:39:42.629Z"}
+[Backend B :3002] ... UNAVAILABLE (Port 3002 not responding)
+==================================================
+Verifying Backend A continues to handle traffic:
+CONFIRMED: Backend A is operational (HTTP 200) while Backend B is down.
+
+>>> STEP 6: Full Recovery (Restarting Backend B)...
+Starting Backend B on port 3002...
+Backend B successfully started (PID: 37754) on http://0.0.0.0:3002
+Final health check for both instances:
+==================================================
+Backend Health Check Report
+Date: Mon Nov 23 01:09:43 IST 2026
+==================================================
+[Backend A :3001] ... HEALTHY (HTTP 200)
+  Response: {"status":"UP","backend":"A","port":3001,"timestamp":"2026-11-22T19:39:43.731Z"}
+[Backend B :3002] ... HEALTHY (HTTP 200)
+  Response: {"status":"UP","backend":"B","port":3002,"timestamp":"2026-11-22T19:39:43.804Z"}
+==================================================
+
+=================================================================
+SUCCESS: Backend failover and recovery test completed cleanly!
+=================================================================
+=================================================================
+BACKEND ACCESS SECURITY VALIDATION (Requirement C)
+=================================================================
+
+--- TEST 1: Authorized Edge Nodes ---
+[TEST] Probing Backend on port 3001 from client IP: 10.200.251.106
+       Authorization Status: AUTHORIZED
+       Expected HTTP Status: 200
+       Result: PASS - Access Permitted
+
+[TEST] Probing Backend on port 3001 from client IP: 10.200.251.227
+       Authorization Status: AUTHORIZED
+       Expected HTTP Status: 200
+       Result: PASS - Access Permitted
+
+[TEST] Probing Backend on port 3001 from client IP: 127.0.0.1
+       Authorization Status: AUTHORIZED
+       Expected HTTP Status: 200
+       Result: PASS - Access Permitted
+
+--- TEST 2: Unauthorized Client Denials ---
+[TEST] Probing Backend on port 3001 from client IP: 10.200.251.99
+       Authorization Status: UNAUTHORIZED (DENIED)
+       Expected HTTP Status: 403
+       Result: PASS - Access Dropped/Rejected with 403
+
+[TEST] Probing Backend on port 3002 from client IP: 192.168.1.150
+       Authorization Status: UNAUTHORIZED (DENIED)
+       Expected HTTP Status: 403
+       Result: PASS - Access Dropped/Rejected with 403
+
+[TEST] Probing Backend on port 3002 from client IP: 172.16.0.4
+       Authorization Status: UNAUTHORIZED (DENIED)
+       Expected HTTP Status: 403
+       Result: PASS - Access Dropped/Rejected with 403
+
+--- TEST 3: Live Ingress Verification to Local Service ---
+[LIVE TEST ERROR] connect ECONNREFUSED 127.0.0.1:3001
+=================================================================
+BACKEND ACCESS SECURITY VALIDATION (Requirement C)
+=================================================================
+
+--- TEST 1: Authorized Edge Nodes ---
+[TEST] Probing Backend on port 3001 from client IP: 10.200.251.106
+       Authorization Status: AUTHORIZED
+       Expected HTTP Status: 200
+       Result: PASS - Access Permitted
+
+[TEST] Probing Backend on port 3001 from client IP: 10.200.251.227
+       Authorization Status: AUTHORIZED
+       Expected HTTP Status: 200
+       Result: PASS - Access Permitted
+
+[TEST] Probing Backend on port 3001 from client IP: 127.0.0.1
+       Authorization Status: AUTHORIZED
+       Expected HTTP Status: 200
+       Result: PASS - Access Permitted
+
+--- TEST 2: Unauthorized Client Denials ---
+[TEST] Probing Backend on port 3001 from client IP: 10.200.251.99
+       Authorization Status: UNAUTHORIZED (DENIED)
+       Expected HTTP Status: 403
+       Result: PASS - Access Dropped/Rejected with 403
+
+[TEST] Probing Backend on port 3002 from client IP: 192.168.1.150
+       Authorization Status: UNAUTHORIZED (DENIED)
+       Expected HTTP Status: 403
+       Result: PASS - Access Dropped/Rejected with 403
+
+[TEST] Probing Backend on port 3002 from client IP: 172.16.0.4
+       Authorization Status: UNAUTHORIZED (DENIED)
+       Expected HTTP Status: 403
+       Result: PASS - Access Dropped/Rejected with 403
+
+--- TEST 3: Live Ingress Verification to Local Service ---
+[LIVE TEST] Local request from loopback (127.0.0.1): HTTP 200 OK
+[LIVE TEST] Body: {"status":"UP","backend":"A","port":3001,"timestamp":"2026-11-22T19:40:40.573Z"}

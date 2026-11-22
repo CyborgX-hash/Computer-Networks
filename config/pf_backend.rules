@@ -1,0 +1,26 @@
+# =============================================================================
+# PF (Packet Filter) Access Control Rules for Backend Services (Mac 3)
+# =============================================================================
+# Machine: Mac 3 (Saksham - 10.200.251.76)
+# Services:
+#   - Backend A: TCP port 3001
+#   - Backend B: TCP port 3002
+#
+# Security Policy (Requirement C):
+#   - Only authorized edge nodes (Mac 1 standby edge and Mac 2 primary edge)
+#     can access backend ports.
+#   - Local loopback (127.0.0.1) is allowed for health checks and local monitoring.
+#   - All other inbound connections to ports 3001 and 3002 MUST be denied.
+# =============================================================================
+
+# Define Authorized Edge Hosts
+table <authorized_edges> { 127.0.0.1, 10.200.251.106, 10.200.251.227 }
+
+# Allow local loopback traffic
+pass in quick on lo0 proto tcp to any port { 3001, 3002 }
+
+# Allow traffic strictly from authorized edge nodes
+pass in quick proto tcp from <authorized_edges> to any port { 3001, 3002 }
+
+# Block and drop all other traffic to backend ports
+block drop in quick proto tcp to any port { 3001, 3002 }
