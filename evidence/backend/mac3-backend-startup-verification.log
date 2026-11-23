@@ -1,0 +1,145 @@
+=================================================================
+MAC 3 BACKEND STARTUP & LOCAL/LAN VERIFICATION LOG
+Date: Mon Nov 23 01:34:43 IST 2026
+Host: 10.200.251.76 (Sakshams-MacBook-Pro-8.local)
+=================================================================
+
+--- 1. ACTIVE PROCESS STATUS ---
+  501 39282  1674   0  1:11AM ??         0:00.29 /Applications/Antigravity IDE.app/Contents/Frameworks/Antigravity IDE Helper (Plugin).app/Contents/MacOS/Antigravity IDE Helper (Plugin) --max-old-space-size=3072 /Applications/Antigravity IDE.app/Contents/Resources/app/extensions/node_modules/typescript/lib/tsserver.js --serverMode partialSemantic --useInferredProjectPerProjectRoot --disableAutomaticTypingAcquisition --cancellationPipeName /var/folders/65/kry7bbgd28q6j083zq8xpvhw0000gn/T/vscode-typescript501/fce2353e8d5b1e4ef6a4/tscancellation-b6ea9e65643ce423369a.tmp* --locale en --noGetErrOnBackgroundUpdate --canUseWatchEvents --validateDefaultNpmLocation --useNodeIpc
+  501 39283  1674   0  1:11AM ??         0:00.30 /Applications/Antigravity IDE.app/Contents/Frameworks/Antigravity IDE Helper (Plugin).app/Contents/MacOS/Antigravity IDE Helper (Plugin) --max-old-space-size=3072 /Applications/Antigravity IDE.app/Contents/Resources/app/extensions/node_modules/typescript/lib/tsserver.js --useInferredProjectPerProjectRoot --enableTelemetry --cancellationPipeName /var/folders/65/kry7bbgd28q6j083zq8xpvhw0000gn/T/vscode-typescript501/fce2353e8d5b1e4ef6a4/tscancellation-1e584f3f944fa1d27fbc.tmp* --locale en --noGetErrOnBackgroundUpdate --canUseWatchEvents --validateDefaultNpmLocation --useNodeIpc
+  501 42621     1   0  1:34AM ttys042    0:00.14 node server.js
+  501 42632     1   0  1:34AM ttys042    0:00.12 node server.js
+
+--- 2. LISTENING PORTS & BINDINGS ---
+COMMAND   PID            USER   FD   TYPE             DEVICE SIZE/OFF NODE NAME
+node    42621 sakshamsontakke   12u  IPv4 0x7c1705326268fe65      0t0  TCP *:3001 (LISTEN)
+node    42632 sakshamsontakke   12u  IPv4 0xdb1f9ace7556a324      0t0  TCP *:3002 (LISTEN)
+
+--- 3. LOCAL LOOPBACK HEALTH CHECKS (127.0.0.1) ---
+[Backend A :3001 /health]
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0100    80  100    80    0     0  29817      0 --:--:-- --:--:-- --:--:-- 40000
+HTTP/1.1 200 OK
+X-Powered-By: Express
+X-Backend: A
+Content-Type: application/json; charset=utf-8
+Content-Length: 80
+ETag: W/"50-S9tsw0/Z/5adg9xikpknG41OsOg"
+Date: Sun, 22 Nov 2026 20:04:43 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+{"status":"UP","backend":"A","port":3001,"timestamp":"2026-11-22T20:04:43.568Z"}
+[Backend B :3002 /health]
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0100    80  100    80    0     0  32976      0 --:--:-- --:--:-- --:--:-- 40000
+HTTP/1.1 200 OK
+X-Powered-By: Express
+X-Backend: B
+Content-Type: application/json; charset=utf-8
+Content-Length: 80
+ETag: W/"50-dE86ZGzWqbpO5W3XRthq3GUQ654"
+Date: Sun, 22 Nov 2026 20:04:43 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+{"status":"UP","backend":"B","port":3002,"timestamp":"2026-11-22T20:04:43.576Z"}
+--- 4. LAN INTERFACE HEALTH CHECKS (10.200.251.76) ---
+[Backend A 10.200.251.76:3001 /health]
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0100    80  100    80    0     0  13061      0 --:--:-- --:--:-- --:--:-- 13333
+HTTP/1.1 200 OK
+X-Powered-By: Express
+X-Backend: A
+Content-Type: application/json; charset=utf-8
+Content-Length: 80
+ETag: W/"50-z66Zhm8BfY5Wh1pV1oUIsK0KzHE"
+Date: Sun, 22 Nov 2026 20:04:43 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+{"status":"UP","backend":"A","port":3001,"timestamp":"2026-11-22T20:04:43.588Z"}
+[Backend B 10.200.251.76:3002 /health]
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0100    80  100    80    0     0  48019      0 --:--:-- --:--:-- --:--:-- 80000
+HTTP/1.1 200 OK
+X-Powered-By: Express
+X-Backend: B
+Content-Type: application/json; charset=utf-8
+Content-Length: 80
+ETag: W/"50-88syR+gpyBhQLmGVPKMfJf/Fd1M"
+Date: Sun, 22 Nov 2026 20:04:43 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+{"status":"UP","backend":"B","port":3002,"timestamp":"2026-11-22T20:04:43.596Z"}
+--- 5. BASELINE ENDPOINTS & IDENTIFYING HEADERS ---
+[Backend A /]
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0100    62  100    62    0     0  51580      0 --:--:-- --:--:-- --:--:-- 62000
+HTTP/1.1 200 OK
+X-Powered-By: Express
+X-Backend: A
+Content-Type: application/json; charset=utf-8
+Content-Length: 62
+ETag: W/"3e-QF9vFacPifwgRXeqh9wcQA56VjA"
+Date: Sun, 22 Nov 2026 20:04:43 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+{"backend":"A","status":"ok","message":"Backend A is running"}
+[Backend B /]
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0100    62  100    62    0     0  52631      0 --:--:-- --:--:-- --:--:-- 62000
+HTTP/1.1 200 OK
+X-Powered-By: Express
+X-Backend: B
+Content-Type: application/json; charset=utf-8
+Content-Length: 62
+ETag: W/"3e-L7e+fLmzUIpnHbkY2t3E2GNlFR0"
+Date: Sun, 22 Nov 2026 20:04:43 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+{"backend":"B","status":"ok","message":"Backend B is running"}
+[Backend A /api/status]
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0100    29  100    29    0     0  23218      0 --:--:-- --:--:-- --:--:-- 29000
+HTTP/1.1 200 OK
+X-Powered-By: Express
+X-Backend: A
+Cache-Control: public, max-age=60
+Content-Type: application/json; charset=utf-8
+Content-Length: 29
+ETag: W/"1d-/mMMZex8nvIDi44lSUobi0vFg/M"
+Date: Sun, 22 Nov 2026 20:04:43 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+{"backend":"A","status":"ok"}
+[Backend B /api/status]
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0100    29  100    29    0     0  25394      0 --:--:-- --:--:-- --:--:-- 29000
+HTTP/1.1 200 OK
+X-Powered-By: Express
+X-Backend: B
+Cache-Control: public, max-age=60
+Content-Type: application/json; charset=utf-8
+Content-Length: 29
+ETag: W/"1d-eqo46f6cZTMyh8pAIw5ntQG78PA"
+Date: Sun, 22 Nov 2026 20:04:43 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+{"backend":"B","status":"ok"}
+=================================================================
+VERIFICATION COMPLETED SUCCESSFULLY
+=================================================================

@@ -24,8 +24,9 @@ if [ -n "$OCCUPIED_PID" ]; then
 fi
 
 echo "Starting Backend B on port 3002..."
-nohup node server.js > "$LOG_FILE" 2>&1 &
+nohup node server.js < /dev/null >> "$LOG_FILE" 2>&1 &
 NEW_PID=$!
+disown "$NEW_PID" 2>/dev/null || true
 echo "$NEW_PID" > "$PID_FILE"
 
 sleep 1

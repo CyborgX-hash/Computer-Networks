@@ -1,0 +1,7 @@
+# Runtime PID and Log files
+backend/*.pid
+backend/*.log
+*.pid
+
+# macOS system files
+.DS_Store
