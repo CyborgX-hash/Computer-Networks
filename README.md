@@ -227,8 +227,8 @@ Client (Mac 1)            DNS (Mac 1:53)          Edge / Nginx (Mac 2)     Backe
 2. **Configure DNS Records**:
    Edit `config/dnsmasq.conf` and update the IP addresses with Mac 2's LAN IP:
    ```conf
-   address=/app.teamX.test/10.7.17.248
-   address=/api.teamX.test/10.7.17.248
+   address=/app.teamX.test/10.200.251.227
+   address=/api.teamX.test/10.200.251.227
    ```
 
 3. **Start dnsmasq** (runs on privileged port 53):
@@ -240,6 +240,88 @@ Client (Mac 1)            DNS (Mac 1:53)          Edge / Nginx (Mac 2)     Backe
    ```bash
    sudo networksetup -setdnsservers Wi-Fi 127.0.0.1
    ```
+
+---
+
+### Mac 1: Standby Edge Reverse Proxy (High Availability Ingress)
+
+Mac 1 acts as the **Standby Edge Proxy**, ready to take over ingress traffic if the Primary Edge on Mac 2 (`10.200.251.227`) experiences failure or scheduled maintenance.
+
+#### 1. Installation
+```bash
+# Install nginx on Mac 1 via Homebrew
+brew install nginx
+
+# Verify installation
+which nginx       # /opt/homebrew/bin/nginx
+nginx -v          # nginx/1.31.9
+```
+
+#### 2. Configuration & Backup
+The standby configuration is maintained in [`config/nginx-standby.conf`](config/nginx-standby.conf), mirroring Mac 2's upstream load balancing and passive failover:
+- **Upstreams**: Backend A (`10.200.251.76:3001`) and Backend B (`10.200.251.76:3002`)
+- **Passive Health Checks**: `max_fails=1 fail_timeout=10s`
+- **Failover Directive**: `proxy_next_upstream error timeout invalid_header http_500 http_502 http_503 http_504;`
+- **Port**: `8443 ssl`
+- **Virtual Hosts**: `app.teamX.test` and `api.teamX.test`
+
+Backup default live nginx config:
+```bash
+cp /opt/homebrew/etc/nginx/nginx.conf /opt/homebrew/etc/nginx/nginx.conf.backup
+```
+
+#### 3. TLS Certificate Requirements
+Standby edge requires the shared project certificate matching Mac 2:
+1. Ensure certificate directory exists on Mac 1:
+   ```bash
+   mkdir -p /opt/homebrew/etc/nginx/certs
+   ```
+2. Securely transfer the dual-SAN certificate and private key from Mac 2:
+   ```bash
+   scp priyanshu@10.200.251.227:/opt/homebrew/etc/nginx/certs/app-and-api.teamX.test.pem /opt/homebrew/etc/nginx/certs/
+   scp priyanshu@10.200.251.227:/opt/homebrew/etc/nginx/certs/app-and-api.teamX.test-key.pem /opt/homebrew/etc/nginx/certs/
+   chmod 600 /opt/homebrew/etc/nginx/certs/app-and-api.teamX.test-key.pem
+   ```
+3. Trust root CA on Mac 1:
+   ```bash
+   sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain rootCA.pem
+   ```
+
+#### 4. Service Management (Start, Reload, Stop)
+```bash
+# Validate configuration syntax
+nginx -t -c /opt/homebrew/etc/nginx/nginx-standby.conf
+
+# Start Standby Edge in foreground / daemon
+nginx -c /opt/homebrew/etc/nginx/nginx-standby.conf
+
+# Reload configuration after changes
+nginx -s reload -c /opt/homebrew/etc/nginx/nginx-standby.conf
+
+# Stop Standby Edge
+nginx -s stop -c /opt/homebrew/etc/nginx/nginx-standby.conf
+```
+
+#### 5. Validation Commands
+```bash
+# Validate HTTPS endpoint
+curl -i https://app.teamX.test:8443/health
+curl -i https://api.teamX.test:8443/api/status
+
+# Verify round-robin upstream distribution
+for i in {1..4}; do
+  curl -s -I https://app.teamX.test:8443/health | grep -i "x-backend"
+done
+```
+
+#### 6. Rollback Instructions
+```bash
+# Stop standby nginx
+nginx -s stop 2>/dev/null
+
+# Restore original default configuration
+cp /opt/homebrew/etc/nginx/nginx.conf.backup /opt/homebrew/etc/nginx/nginx.conf
+```
 
 ---
 
