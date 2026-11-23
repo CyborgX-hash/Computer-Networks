@@ -519,26 +519,42 @@ The [`evidence/`](evidence/) directory contains packet captures, diagnostic logs
 
 Detailed technical documentation and team acceptance reports for Phase 2 implementation:
 
-1. **[Phase 2 Joint Final Acceptance Report](evidence/phase2-final-acceptance-report.md)**:
+1. **[Phase 2 Final Project Submission Summary](evidence/final/phase2-submission-summary.md)**:
+   - Complete executive summary of implementation, testing, passes, unverified items, and limitations.
+   - Comprehensive cross-node delivery audit and final Git integrity status.
+
+2. **[Phase 2 Consolidated Final Acceptance & Fault-Injection Matrix](evidence/final/phase2-final-acceptance-test.md)**:
+   - 22-point acceptance test matrix across DNS, TCP/Network, TLS/HTTPS, Application, and Edge Failover layers.
+   - Detailed status breakdown: 19 PASS (86.4%), 3 NOT VERIFIED (13.6%), 0 FAIL.
+
+3. **[Phase 2 Final System Architecture Specification](architecture/phase2-final-architecture.md)**:
+   - Physical and logical 3-Mac network topology (`10.200.251.0/24`).
+   - Multi-node role and port allocation matrix, high-availability subsystems, and Mermaid protocol flow.
+
+4. **[Phase 2 Edge Failover and DNS Migration Runbook](evidence/dns/phase2-edge-failover-and-dns-migration.md)**:
+   - Exact procedure for migrating traffic from Primary Edge (`10.200.251.227`) to Standby Edge (`10.200.251.106`).
+   - DNS record update procedure, 30-second TTL propagation wait, and complete two-way recovery steps.
+
+5. **[Phase 2 Packet Filter (PF) Backend Firewall Verification Report](evidence/backend/phase2-pf-firewall-verification.md)**:
+   - Configuration audit of `config/pf_backend.rules` and syntax verification via `pfctl -nf`.
+   - Multi-layer defense-in-depth: Express IP whitelist middleware (`ALLOWED_IPS`) and scoped kernel anchor (`-a backend`).
+   - Non-destructive safe activation and one-command instant rollback (`sudo pfctl -a backend -F all`).
+
+6. **[Phase 2 Joint Final Acceptance Report](evidence/phase2-final-acceptance-report.md)**:
    - Full synthesis across all 3 nodes and 3 team members.
    - Acceptance criteria verification matrix (Requirements A through F).
    - Component state, IP mappings, port allocations, and runtime health.
-   - Comprehensive cross-node failure testing (Edge failover, DNS outage, Backend outage).
-   - Complete multi-command demonstration script for faculty evaluation.
 
-2. **[Phase 2 Member 2 Final Report (Saksham — Mac 3)](evidence/phase2-member2-final-report.md)**:
+7. **[Phase 2 Member 2 Final Report (Saksham — Mac 3)](evidence/phase2-member2-final-report.md)**:
    - Detailed technical report for Backend Services A (`:3001`) and B (`:3002`).
-   - Node.js architecture, health endpoints (`GET /health`), and lifecycle automation.
-   - Express IP whitelisting implementation and testing.
-   - Scoped macOS Packet Filter (`pfctl`) anchor configuration (`config/pf_backend.rules`) and safe rollback.
-   - Temporary DNS TTL caching resolver implementation and verification.
+   - Node.js architecture, health endpoints (`GET /health`), lifecycle automation, and daemon persistence.
+   - Isolated DNS TTL caching resolver implementation on port `5353`.
 
-3. **[Phase 2 Standby Edge Backend Failover Evidence](evidence/backend/phase2-standby-backend-failover.md)**:
+8. **[Phase 2 Standby Edge Backend Failover Evidence](evidence/backend/phase2-standby-backend-failover.md)**:
    - 12/12 successful requests through Standby Edge (`10.200.251.106:8443`) during Backend A outage.
    - 12/12 successful requests through Standby Edge during Backend B outage.
-   - Zero-downtime passive failover demonstration.
 
-4. **[Phase 2 DNS TTL Caching Experiment Report](evidence/dns/phase2-dns-ttl-caching.md)**:
+9. **[Phase 2 DNS TTL Caching Experiment Report](evidence/dns/phase2-dns-ttl-caching.md)**:
    - Architectural design of isolated `dnsmasq` caching resolver on `127.0.0.1:5353`.
    - Verified timestamps for cache hit, TTL countdown, record update on upstream (`10.200.251.227`), and cache eviction.
 
