@@ -19,7 +19,9 @@ A bare-metal, multi-tier distributed network service platform deployed across a 
   - [Mac 3: Dual Backend Microservices](#mac-3-dual-backend-microservices)
 - [9. Verification & Testing Playbook](#9-verification--testing-playbook)
 - [10. Protocol Capture & Evidence Catalog](#10-protocol-capture--evidence-catalog)
-- [11. Troubleshooting](#11-troubleshooting)
+- [11. Phase 2 Key Deliverables & Reports](#11-phase-2-key-deliverables--reports)
+- [12. Faculty Demonstration Playbook](#12-faculty-demonstration-playbook)
+- [13. Troubleshooting & Diagnostics Matrix](#13-troubleshooting--diagnostics-matrix)
 
 ---
 
@@ -35,21 +37,23 @@ The platform partitions standard web service infrastructure across three dedicat
           ▼                                  ▼                     ▼
 ┌──────────────────┐               ┌──────────────────┐  ┌──────────────────┐
 │      Mac 1       │               │      Mac 2       │  │      Mac 3       │
-│  (10.7.x.x)      │               │  (10.7.17.248)   │  │  (10.7.19.140)   │
+│ (10.200.251.106) │               │ (10.200.251.227) │  │ (10.200.251.76)  │
 ├──────────────────┤               ├──────────────────┤  ├──────────────────┤
-│ • Private DNS    │  (1) UDP 53   │ • Nginx Ingress  │  │ • Backend A      │
+│ • Primary DNS    │  (1) UDP 53   │ • Primary Ingress│  │ • Backend A      │
 │   (dnsmasq)      │──────────────>│ • TLS 1.3 Term.  │  │   (Node.js :3001)│
-│ • Test Client    │  (2) TCP 8443 │ • Round-Robin    │  │ • Backend B      │
-│   (curl/browser) │──────────────>│   Load Balancer  │  │   (Node.js :3002)│
+│ • Standby Edge   │  (2) TCP 8443 │ • Round-Robin    │  │ • Backend B      │
+│   (nginx :8443)  │──────────────>│   Load Balancer  │  │   (Node.js :3002)│
+│ • Test Client    │               │ • Backup DNS     │  │ • PF Anchor Prep │
+│   (curl/browser) │               │   (dnsmasq :53)  │  │ • IP Whitelist   │
 └──────────────────┘               └─────────┬────────┘  └────────▲─────────┘
                                              │ (3) HTTP Forward   │
                                              └────────────────────┘
 ```
 
-1. **Private Name Resolution**: Mac 1 hosts a lightweight `dnsmasq` instance routing `.test` domains directly to the Edge Proxy (Mac 2), preserving normal public internet resolution via upstream forwarders.
-2. **Secure Edge Ingress**: Mac 2 acts as a single edge gateway running `nginx`. It terminates TLS over port `8443` using locally trusted X.509 PKI certificates.
-3. **Layer 7 Load Balancing**: Ingress traffic is balanced across two isolated upstream Node.js services hosted on Mac 3 (`:3001` and `:3002`) using a Round-Robin algorithm.
-4. **Header Passthrough & Caching**: Backend services inject identification headers (`X-Backend: A` / `X-Backend: B`) and caching directives (`Cache-Control: public, max-age=60`), which the reverse proxy passes downstream intact.
+1. **Private Name Resolution & High Availability DNS**: Mac 1 hosts authoritative Primary DNS (`dnsmasq`), while Mac 2 provides Backup DNS. Upstream clients query with sub-second failover.
+2. **Secure Edge Ingress & Standby Redundancy**: Mac 2 acts as Primary Edge Gateway terminating TLS over port `8443` using locally trusted PKI certificates. Mac 1 provides an automated Standby Edge proxy on port `8443`.
+3. **Layer 7 Load Balancing & Upstream Failover**: Ingress traffic is balanced across two isolated upstream Node.js services hosted on Mac 3 (`:3001` and `:3002`) using Round-Robin scheduling and passive health checks (`max_fails=1 fail_timeout=10s`).
+4. **Multi-Layer Access Control**: Backend services enforce strict IP whitelisting in Express middleware (`ALLOWED_IPS`: `10.200.251.106`, `10.200.251.227`, `127.0.0.1`), backed by kernel-level scoped Packet Filter (`pfctl`) rules.
 
 ---
 
@@ -57,9 +61,9 @@ The platform partitions standard web service infrastructure across three dedicat
 
 | Node | Machine Role | Core Software / Runtimes | Network Interfaces & Ports | Description |
 | :--- | :--- | :--- | :--- | :--- |
-| **Mac 1** | • Private DNS Server<br>• Client Node | `dnsmasq`, `curl`, `dig`, `nslookup` | `en0` / UDP `53`<br>Outbound TCP Client | Authoritative resolver for project domain `app.teamX.test`; executes validation requests. |
-| **Mac 2** | • Edge Ingress Proxy<br>• TLS Terminator<br>• Load Balancer | `nginx` (Homebrew) | `en0` (e.g. `10.7.17.248`)<br>TCP `8443` (TLS)<br>TCP `8080` (HTTP Redirect) | LAN edge gateway terminating TLS and proxying requests to Mac 3. |
-| **Mac 3** | • Upstream Backend A<br>• Upstream Backend B | Node.js, Express.js | `en0` (e.g. `10.7.19.140`)<br>TCP `3001` (Backend A)<br>TCP `3002` (Backend B) | Independent application instances executing business logic and response generation. |
+| **Mac 1** (Mihika / Member 1) | • Primary DNS Server<br>• Standby Edge Ingress<br>• Client Test Node | `dnsmasq`, `nginx`, `curl`, `dig`, `openssl` | `en0` (`10.200.251.106`)<br>UDP `53` (Primary DNS)<br>TCP `8443` (Standby Edge)<br>Outbound Client | Authoritative primary resolver for `app.teamX.test`; Standby reverse proxy for high availability; validation client. |
+| **Mac 2** (Priyanshu / Member 3) | • Primary Edge Ingress<br>• TLS Terminator<br>• Load Balancer<br>• Backup DNS Server | `nginx` (Homebrew), `dnsmasq`, `mkcert` | `en0` (`10.200.251.227`)<br>TCP `8443` (Primary TLS)<br>TCP `8080` (HTTP Redirect)<br>UDP `53` (Backup DNS) | Primary LAN edge gateway terminating TLS and proxying requests to Mac 3; Backup DNS daemon for high availability. |
+| **Mac 3** (Saksham / Member 2) | • Upstream Backend A<br>• Upstream Backend B<br>• Ingress Security & PF | Node.js, Express.js, macOS PF (`pfctl`) | `en0` (`10.200.251.76`)<br>TCP `3001` (Backend A)<br>TCP `3002` (Backend B)<br>TCP `5353` (TTL Cache Resolver) | Dual independent microservice instances executing business logic; IP access control; isolated DNS caching resolver. |
 
 ---
 
@@ -83,7 +87,7 @@ graph TD
 
     %% Step 1: DNS Resolution
     Client -- "(1) Query: app.teamX.test (UDP:53)" --> DNS
-    DNS -- "(2) Answer: 10.7.17.248 (Mac 2)" --> Client
+    DNS -- "(2) Answer: 10.200.251.227 (Mac 2)" --> Client
 
     %% Step 2: Client to Edge Ingress
     Client -- "(3) TCP 3-Way Handshake + TLS 1.3" --> Nginx
@@ -358,8 +362,8 @@ cp /opt/homebrew/etc/nginx/nginx.conf.backup /opt/homebrew/etc/nginx/nginx.conf
    - Update `config/nginx.conf` upstream block with Mac 3's LAN IP:
      ```nginx
      upstream backend_servers {
-         server 10.7.19.140:3001;   # Backend A
-         server 10.7.19.140:3002;   # Backend B
+         server 10.200.251.76:3001;   # Backend A
+         server 10.200.251.76:3002;   # Backend B
      }
      ```
    - Copy configuration and start nginx:
@@ -434,7 +438,7 @@ Execute these commands from **Mac 1** (Client Node) to validate the end-to-end n
 ```bash
 dig @127.0.0.1 app.teamX.test
 ```
-*Expected Result:* `ANSWER SECTION` returns Mac 2's IP (`10.7.17.248`).
+*Expected Result:* `ANSWER SECTION` returns Mac 2's IP (`10.200.251.227`).
 
 ---
 
@@ -492,9 +496,9 @@ curl -I https://app.teamX.test:8443/api/status | grep -i "cache-control"
 
 ## 10. Protocol Capture & Evidence Catalog
 
-The [`evidence/`](evidence/) directory contains packet captures and screenshots taken during live test executions:
+The [`evidence/`](evidence/) directory contains packet captures, diagnostic logs, and verification reports taken during live multi-node test executions:
 
-| Category | Evidence File | Verified Protocol Concept |
+| Category | Evidence File | Verified Protocol Concept / Scope |
 | :--- | :--- | :--- |
 | **DNS** | [`evidence/dns/DNS-Captured.jpg`](evidence/dns/DNS-Captured.jpg) | UDP Port 53 DNS query for `app.teamX.test` and A record resolution. |
 | **TCP** | [`evidence/tcp/tcp-three-way-handshake.jpg`](evidence/tcp/tcp-three-way-handshake.jpg) | Standard 3-Way Handshake (`SYN` $\rightarrow$ `SYN-ACK` $\rightarrow$ `ACK`) on port `8443`. |
@@ -504,17 +508,135 @@ The [`evidence/`](evidence/) directory contains packet captures and screenshots 
 | **Load Balancing**| [`evidence/load-balancing/Load-balancing .jpg`](evidence/load-balancing/Load-balancing%20.jpg) | Alternating `X-Backend: A` and `X-Backend: B` headers via Nginx Round-Robin. |
 | **Backend Services**| [`evidence/backend/Backend-A.jpg`](evidence/backend/Backend-A.jpg)<br>[`evidence/backend/Backend-B.jpg`](evidence/backend/Backend-B.jpg) | Direct isolated Node.js instance execution on ports `3001` and `3002`. |
 | **HTTP Caching** | [`evidence/caching/http-cache-headers.jpg`](evidence/caching/http-cache-headers.jpg) | `Cache-Control` header passthrough at the reverse proxy layer. |
+| **Phase 2 Standby Failover** | [`evidence/backend/phase2-standby-backend-failover.md`](evidence/backend/phase2-standby-backend-failover.md) | Coordinated 12/12 test verifying standby edge upstream routing during Backend A and B outages. |
+| **Phase 2 DNS TTL Caching** | [`evidence/dns/phase2-dns-ttl-caching.md`](evidence/dns/phase2-dns-ttl-caching.md) | Isolated resolver verifying TTL 30s countdown, cache hits, cache eviction, and upstream re-query. |
+| **Phase 2 Backend Verification** | [`evidence/backend/phase2-backend-verification.log`](evidence/backend/phase2-backend-verification.log) | Local health checks, Express IP whitelist verification (HTTP 403), and failover scripts. |
+| **Phase 2 Startup Logs** | [`evidence/backend/mac3-backend-startup-verification.log`](evidence/backend/mac3-backend-startup-verification.log) | Daemonized Node.js startup (`PPID 1`), LAN interface bindings (`0.0.0.0`), and PID tracking. |
 
 ---
 
-## 11. Troubleshooting
+## 11. Phase 2 Key Deliverables & Reports
 
-| Symptom | Probable Cause | Diagnostic / Remediation Step |
-| :--- | :--- | :--- |
-| `dig` returns `NXDOMAIN` | `dnsmasq` is not running or domain record is misspelled. | Run `sudo dnsmasq -C config/dnsmasq.conf -d` and inspect query logs. |
-| `curl: (60) SSL certificate problem` | Client machine trust store does not contain the Root CA. | Export `rootCA.pem` from Mac 2 and run `sudo security add-trusted-cert ...`. |
-| `curl: (7) Failed to connect` | `nginx` is not running or macOS firewall is blocking port 8443. | Run `sudo lsof -i :8443` on Mac 2 to confirm listening state; check firewall settings. |
-| `HTTP 502 Bad Gateway` | Upstream Node.js instances are stopped or IP mismatch in `nginx.conf`. | Verify `MAC3_IP` in `nginx.conf` and test `curl http://MAC3_IP:3001/` from Mac 2. |
-| No `X-Backend` alternation | Only one backend server is active on Mac 3. | Confirm both `node server.js` processes are active on ports `3001` and `3002`. |
+Detailed technical documentation and team acceptance reports for Phase 2 implementation:
+
+1. **[Phase 2 Joint Final Acceptance Report](evidence/phase2-final-acceptance-report.md)**:
+   - Full synthesis across all 3 nodes and 3 team members.
+   - Acceptance criteria verification matrix (Requirements A through F).
+   - Component state, IP mappings, port allocations, and runtime health.
+   - Comprehensive cross-node failure testing (Edge failover, DNS outage, Backend outage).
+   - Complete multi-command demonstration script for faculty evaluation.
+
+2. **[Phase 2 Member 2 Final Report (Saksham — Mac 3)](evidence/phase2-member2-final-report.md)**:
+   - Detailed technical report for Backend Services A (`:3001`) and B (`:3002`).
+   - Node.js architecture, health endpoints (`GET /health`), and lifecycle automation.
+   - Express IP whitelisting implementation and testing.
+   - Scoped macOS Packet Filter (`pfctl`) anchor configuration (`config/pf_backend.rules`) and safe rollback.
+   - Temporary DNS TTL caching resolver implementation and verification.
+
+3. **[Phase 2 Standby Edge Backend Failover Evidence](evidence/backend/phase2-standby-backend-failover.md)**:
+   - 12/12 successful requests through Standby Edge (`10.200.251.106:8443`) during Backend A outage.
+   - 12/12 successful requests through Standby Edge during Backend B outage.
+   - Zero-downtime passive failover demonstration.
+
+4. **[Phase 2 DNS TTL Caching Experiment Report](evidence/dns/phase2-dns-ttl-caching.md)**:
+   - Architectural design of isolated `dnsmasq` caching resolver on `127.0.0.1:5353`.
+   - Verified timestamps for cache hit, TTL countdown, record update on upstream (`10.200.251.227`), and cache eviction.
+
+---
+
+## 12. Faculty Demonstration Playbook
+
+Follow this step-by-step sequence during project evaluation to verify all platform capabilities:
+
+### Demo 1: High Availability DNS & Automatic Resolver Failover
+```bash
+# Query Primary DNS on Mac 1
+dig @10.200.251.106 app.teamX.test +short
+# Output: 10.200.251.227
+
+# Query Backup DNS on Mac 2
+dig @10.200.251.227 app.teamX.test +short
+# Output: 10.200.251.227
+
+# Simulate Primary DNS failure by stopping dnsmasq on Mac 1, then verify query from client:
+# Client automatically falls over to Mac 2 (10.200.251.227) without service interruption.
+```
+
+### Demo 2: Strict TLS & Round-Robin Ingress Load Balancing
+```bash
+# Execute 4 requests against Primary Edge (Mac 2)
+for i in {1..4}; do
+  curl -s -i --resolve app.teamX.test:8443:10.200.251.227 https://app.teamX.test:8443/api/status | grep -E "HTTP/|x-backend"
+done
+# Output strictly alternates:
+# x-backend: A
+# x-backend: B
+# x-backend: A
+# x-backend: B
+```
+
+### Demo 3: Edge Failover to Standby Reverse Proxy (Mac 1)
+```bash
+# Verify Standby Edge on Mac 1 directly serves requests:
+curl -i --resolve app.teamX.test:8443:10.200.251.106 https://app.teamX.test:8443/health
+# Output: HTTP/2 200 OK (routed to Mac 3 backend)
+```
+
+### Demo 4: Backend Failover & Dynamic Upstream Recovery
+```bash
+# Step 1: On Mac 3, stop Backend A
+./backend/stop-a.sh
+
+# Step 2: From Mac 1 / Mac 2, issue 4 requests
+for i in {1..4}; do
+  curl -s -i --resolve app.teamX.test:8443:10.200.251.227 https://app.teamX.test:8443/api/status | grep "x-backend"
+done
+# Output: 100% routed to Backend B (zero failed requests)
+
+# Step 3: On Mac 3, restart Backend A
+./backend/start-a.sh
+
+# Step 4: Verify round-robin load balancing immediately resumes
+for i in {1..4}; do
+  curl -s -i --resolve app.teamX.test:8443:10.200.251.227 https://app.teamX.test:8443/api/status | grep "x-backend"
+done
+# Output: Alternation between A and B restored.
+```
+
+### Demo 5: Backend Access Control & Whitelist Verification
+```bash
+# On Mac 3, verify local access:
+curl -i http://127.0.0.1:3001/health    # HTTP 200 OK
+
+# From authorized edge nodes (Mac 1: 10.200.251.106 or Mac 2: 10.200.251.227):
+curl -i http://10.200.251.76:3001/health   # HTTP 200 OK
+
+# From an unauthorized machine or simulated non-whitelisted IP:
+# Output: HTTP 403 Forbidden {"error":"Forbidden: Access restricted to authorized edge proxies"}
+```
+
+### Demo 6: DNS TTL Countdown & Cache Expiration
+```bash
+# Query isolated caching resolver on Mac 3 (:5353)
+dig @127.0.0.1 -p 5353 ttl-test.teamX.test
+# Initial response: TTL 30, Query time: 10-15 msec
+# Immediate re-query: TTL 22, Query time: 0 msec (served from cache)
+# After 30 seconds: Cache expires, queries upstream Mac 2 and fetches updated record.
+```
+
+---
+
+## 13. Troubleshooting & Diagnostics Matrix
+
+| Symptom / Error | Probable Cause | Diagnostic Command | Remediation Step |
+| :--- | :--- | :--- | :--- |
+| `ping: sendto: No route to host` / `nc: connectx: No route to host` | macOS Sequoia Local Network Privacy (TCC) sandbox restriction | `ping 10.200.251.227` from native Terminal vs sandbox | Run command via native `Terminal.app` or bypass sandboxed subshell. |
+| `connect ECONNREFUSED 10.200.251.76:3001` | Backend service stopped or terminated when terminal shell closed | `ps aux \| grep server.js`<br>`lsof -i :3001` | Use detached daemon startup: `nohup node server.js < /dev/null >> "$LOG_FILE" 2>&1 & disown` via `./backend/start-all.sh`. |
+| `HTTP 403 Forbidden` from Backend | Client IP is not in Express `ALLOWED_IPS` whitelist | `curl -i http://10.200.251.76:3001/health`<br>Inspect client IP in `server.js` log | Add client IP to `ALLOWED_IPS` array in `backend/backend-a/server.js` and `backend-b/server.js`. |
+| `HTTP 502 Bad Gateway` on Edge | Upstream backend processes down or IP misconfigured in Nginx | `curl -i http://10.200.251.76:3001/health`<br>Inspect `/opt/homebrew/var/log/nginx/error.log` | Start backends with `./backend/start-all.sh`; verify upstream block in `nginx.conf` points to `10.200.251.76`. |
+| `curl: (60) SSL certificate problem` | Root CA is not trusted on the client machine | `mkcert -CAROOT`<br>`security find-certificate -c "mkcert"` | Import and trust Root CA: `sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain rootCA.pem`. |
+| `dig` returns `connection timed out` on port 53 | `dnsmasq` stopped or firewall blocking UDP 53 | `sudo lsof -i :53`<br>`sudo dscacheutil -flushcache` | Restart dnsmasq on Mac 1 or Mac 2: `sudo brew services restart dnsmasq`. |
+| PF syntax error or rule parse error | Invalid pf syntax or misplaced anchor directive | `sudo pfctl -nf config/pf_backend.rules` | Validate rules before loading. Ensure sub-anchors do not use root-only statements. |
+| Safe PF Rollback needed | Test completed or need to remove packet filter restrictions | `sudo pfctl -a backend -s rules` | Flush scoped anchor: `sudo pfctl -a backend -F all`. Does not affect system rules. |
 
 ---
