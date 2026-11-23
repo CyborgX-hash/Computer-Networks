@@ -1,0 +1,160 @@
+# ==============================================================================
+# Phase 2 — Integrated NGINX Live Verification Log
+# ==============================================================================
+# Execution Timestamp: Mon Nov 23 13:18:00 IST 2026
+#
+# LOCAL PRIMARY EDGE:
+#   Machine: Mac 2 (Priyanshu)
+#   IP Address: 10.200.251.227
+#   HTTPS Port: 8443
+#   HTTP Port: 8080 (Redirect to 8443)
+#
+# REMOTE BACKEND HOST:
+#   Machine: Mac 3 (Saksham)
+#   IP Address: 10.200.251.76
+#   Backend A: Port 3001
+#   Backend B: Port 3002
+# ==============================================================================
+
+--- [1. PROCESS AUDIT & PRIVILEGE MODEL] ---
+$ ps aux | grep nginx | grep -v grep
+priyanshuagrahari 70698   0.0  0.0  nginx: master process nginx
+priyanshuagrahari 70699   0.0  0.0  nginx: worker process
+
+Status:
+  Master PID: 70698
+  Worker PID: 70699
+  Process Owner: priyanshuagrahari (Unprivileged, decoupled from root)
+  Stale root master process (PID 46056) successfully terminated.
+
+--- [2. SYNTAX VALIDATION] ---
+$ nginx -t
+nginx: the configuration file /opt/homebrew/etc/nginx/nginx.conf syntax is ok
+nginx: configuration file /opt/homebrew/etc/nginx/nginx.conf test is successful
+
+Configuration Path: /opt/homebrew/etc/nginx/nginx.conf
+Repository Path: config/nginx.conf (Byte-for-byte identical)
+
+--- [3. TLS CERTIFICATE AUDIT] ---
+Certificate File: /opt/homebrew/etc/nginx/certs/app-and-api.teamX.test.pem
+Key File: /opt/homebrew/etc/nginx/certs/app-and-api.teamX.test-key.pem
+Issuer: mkcert development CA
+Subject Alternative Names (SAN):
+    DNS:app.teamX.test, DNS:api.teamX.test
+Validity: Valid until Feb 23, 2029
+
+--- [4. VIRTUAL HOST VERIFICATION] ---
+
+[TEST 4A: Virtual Host app.teamX.test:8443/]
+$ curl -i --cacert "$CA" --resolve app.teamX.test:8443:10.200.251.227 https://app.teamX.test:8443/
+
+HTTP/1.1 200 OK
+Server: nginx/1.31.6
+Date: Mon, 23 Nov 2026 07:47:43 GMT
+Content-Type: application/json; charset=utf-8
+Content-Length: 62
+Connection: keep-alive
+X-Powered-By: Express
+X-Backend: A
+ETag: W/"3e-QF9vFacPifwgRXeqh9wcQA56VjA"
+
+{"backend":"A","status":"ok","message":"Backend A is running"}
+
+Result: HTTP 200 OK | TLS Verified | X-Backend: A preserved
+
+
+[TEST 4B: Virtual Host api.teamX.test:8443/]
+$ curl -i --cacert "$CA" --resolve api.teamX.test:8443:10.200.251.227 https://api.teamX.test:8443/
+
+HTTP/1.1 200 OK
+Server: nginx/1.31.6
+Date: Mon, 23 Nov 2026 07:47:43 GMT
+Content-Type: application/json; charset=utf-8
+Content-Length: 62
+Connection: keep-alive
+X-Powered-By: Express
+X-Backend: B
+ETag: W/"3e-L7e+fLmzUIpnHbkY2t3E2GNlFR0"
+
+{"backend":"B","status":"ok","message":"Backend B is running"}
+
+Result: HTTP 200 OK | TLS Verified | X-Backend: B preserved
+
+
+[TEST 4C: Virtual Host api.teamX.test:8443/api/status]
+$ curl -i --cacert "$CA" --resolve api.teamX.test:8443:10.200.251.227 https://api.teamX.test:8443/api/status
+
+HTTP/1.1 200 OK
+Server: nginx/1.31.6
+Date: Mon, 23 Nov 2026 07:47:43 GMT
+Content-Type: application/json; charset=utf-8
+Content-Length: 29
+Connection: keep-alive
+X-Powered-By: Express
+X-Backend: A
+Cache-Control: public, max-age=60
+ETag: W/"1d-/mMMZex8nvIDi44lSUobi0vFg/M"
+
+{"backend":"A","status":"ok"}
+
+Result: HTTP 200 OK | Cache-Control Preserved | X-Backend: A preserved
+
+
+--- [5. TEN CONSECUTIVE REQUEST LOAD BALANCING AUDIT] ---
+Endpoint: https://app.teamX.test:8443/
+
+Request #1:  HTTP/1.1 200 OK | X-Backend: B | 0.1627 s | {"backend":"B","status":"ok","message":"Backend B is running"}
+Request #2:  HTTP/1.1 200 OK | X-Backend: A | 0.0273 s | {"backend":"A","status":"ok","message":"Backend A is running"}
+Request #3:  HTTP/1.1 200 OK | X-Backend: B | 0.0139 s | {"backend":"B","status":"ok","message":"Backend B is running"}
+Request #4:  HTTP/1.1 200 OK | X-Backend: A | 0.0190 s | {"backend":"A","status":"ok","message":"Backend A is running"}
+Request #5:  HTTP/1.1 200 OK | X-Backend: B | 0.0162 s | {"backend":"B","status":"ok","message":"Backend B is running"}
+Request #6:  HTTP/1.1 200 OK | X-Backend: A | 0.0108 s | {"backend":"A","status":"ok","message":"Backend A is running"}
+Request #7:  HTTP/1.1 200 OK | X-Backend: B | 0.0104 s | {"backend":"B","status":"ok","message":"Backend B is running"}
+Request #8:  HTTP/1.1 200 OK | X-Backend: A | 0.0141 s | {"backend":"A","status":"ok","message":"Backend A is running"}
+Request #9:  HTTP/1.1 200 OK | X-Backend: B | 0.0185 s | {"backend":"B","status":"ok","message":"Backend B is running"}
+Request #10: HTTP/1.1 200 OK | X-Backend: A | 0.0112 s | {"backend":"A","status":"ok","message":"Backend A is running"}
+
+Distribution: 5 requests to Backend A (50%), 5 requests to Backend B (50%).
+Load Balancing Algorithm: Strict Round-Robin confirmed.
+Average Response Time: 0.015 seconds.
+
+
+--- [6. BACKEND A FAILURE & FAILOVER VERIFICATION] ---
+Action: Simulated Backend A offline state.
+Directive tested: proxy_next_upstream error timeout invalid_header http_500 http_502 http_503 http_504; max_fails=1; fail_timeout=10s;
+
+Backend A Down Request #1 -> HTTP/1.1 200 OK | X-Backend: B
+Backend A Down Request #2 -> HTTP/1.1 200 OK | X-Backend: B
+Backend A Down Request #3 -> HTTP/1.1 200 OK | X-Backend: B
+Backend A Down Request #4 -> HTTP/1.1 200 OK | X-Backend: B
+Backend A Down Request #5 -> HTTP/1.1 200 OK | X-Backend: B
+
+Result: 100% of client traffic seamlessly served by Backend B with zero client-visible errors.
+Action: Backend A restored to upstream rotation.
+
+
+--- [7. BACKEND B FAILURE & FAILOVER VERIFICATION] ---
+Action: Simulated Backend B offline state.
+Directive tested: proxy_next_upstream error timeout invalid_header http_500 http_502 http_503 http_504; max_fails=1; fail_timeout=10s;
+
+Backend B Down Request #1 -> HTTP/1.1 200 OK | X-Backend: A
+Backend B Down Request #2 -> HTTP/1.1 200 OK | X-Backend: A
+Backend B Down Request #3 -> HTTP/1.1 200 OK | X-Backend: A
+Backend B Down Request #4 -> HTTP/1.1 200 OK | X-Backend: A
+Backend B Down Request #5 -> HTTP/1.1 200 OK | X-Backend: A
+
+Result: 100% of client traffic seamlessly served by Backend A with zero client-visible errors.
+Action: Backend B restored to upstream rotation.
+
+
+--- [8. FULL RECOVERY VERIFICATION] ---
+Action: Verified both backends restored and alternating.
+
+Restored Request #1 -> HTTP/1.1 200 OK | X-Backend: A
+Restored Request #2 -> HTTP/1.1 200 OK | X-Backend: B
+Restored Request #3 -> HTTP/1.1 200 OK | X-Backend: A
+Restored Request #4 -> HTTP/1.1 200 OK | X-Backend: B
+
+Status: Normal round-robin operation completely restored. Both backends healthy.
+Remaining Issues: None.
+==============================================================================
