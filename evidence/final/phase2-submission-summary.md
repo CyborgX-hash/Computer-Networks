@@ -51,29 +51,31 @@
    - Backend A outage simulated: 12/12 consecutive requests routed through Backend B with 0 failed requests.
    - Backend B outage simulated: 12/12 consecutive requests routed through Backend A with 0 failed requests.
    - Recovery of stopped backends immediately restored alternating round-robin distribution.
-5. **Backend Security Whitelist**:
+5. **Backend Security Whitelist & Kernel PF Enforcement**:
    - Localhost and authorized edge nodes (`10.200.251.106`, `10.200.251.227`) successfully connect and receive HTTP 200.
-   - Non-whitelisted IP addresses receive `HTTP 403 Forbidden`.
-   - PF rule syntax validated cleanly using `pfctl -nf`.
+   - Non-whitelisted IP addresses receive `HTTP 403 Forbidden` at L7 and kernel-level drops at L4.
+   - Scoped anchor `com.apple/backend` activated into kernel, rule table verified, and cleanly rolled back.
+6. **Live Edge Failover & Dynamic DNS Migration**:
+   - Primary Nginx stopped on Mac 2; Standby Nginx active on Mac 1.
+   - DNS dynamically updated on Mac 1 to `10.200.251.106`.
+   - Mac 1 and Mac 2 successfully issued requests across the physical LAN to Standby Edge (`:8443`), receiving `HTTP 200 OK` from Backend A and B.
+   - Primary Nginx restored on Mac 2 and confirmed listening on `:8443`.
 
 ---
 
 ## 3. Quantitative Test Results
 
 - **Total Test Cases Evaluated:** 22
-- **Passed (PASS):** 19 (86.4%)
-- **Not Verified (NOT VERIFIED):** 3 (13.6%)
-- **Failed (FAIL):** 0 (0%)
-- **Blocked (BLOCKED):** 0 (0%)
+- **Passed (PASS):** 22 (100.0%)
+- **Not Verified (NOT VERIFIED):** 0 (0.0%)
+- **Failed (FAIL):** 0 (0.0%)
+- **Blocked (BLOCKED):** 0 (0.0%)
 
 ---
 
 ## 4. What Remains Unverified
 
-1. **Live Simultaneous Cross-Node Edge Cutover (EDGE-02, EDGE-03, DNS-05)**:
-   - While Standby Nginx readiness, upstream routing, and DNS record modification have each been independently proven, executing an automated cutover in real-time requires simultaneous multi-operator actions across Mac 1 and Mac 2.
-2. **Kernel-Level Packet Filter Activation (TCP-04)**:
-   - Scoped anchor syntax and rollback mechanisms are fully validated; activation into the running macOS kernel was intentionally withheld pending explicit administrator approval to prevent any unexpected interruption of team connectivity. Application-layer Express IP whitelisting actively enforces the policy.
+- **None.** All 22 test scenarios across DNS, TCP/Network, TLS/HTTPS, Application, and Edge Failover layers have been physically executed and verified with raw command outputs in the evidence catalog.
 
 ---
 
